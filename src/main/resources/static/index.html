@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Retail Management System | Admin Portal</title>
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <style>
+    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f0f2f5; margin: 0; padding: 20px; color: #333; }
+    h1 { text-align: center; color: #1a73e8; }
+    .container { max-width: 800px; margin: 0 auto; }
+    .section { background: white; padding: 25px; margin: 20px 0; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); border-left: 5px solid #1a73e8; }
+    h2 { margin-top: 0; font-size: 1.2rem; color: #555; border-bottom: 1px solid #eee; padding-bottom: 10px; }
+    code { background: #eee; padding: 2px 5px; border-radius: 4px; font-size: 0.9rem; color: #d63384; }
+    label { display: block; margin: 12px 0 5px; font-weight: 600; font-size: 0.9rem; }
+    input { width: 100%; padding: 10px; box-sizing: border-box; border: 1px solid #ddd; border-radius: 6px; margin-bottom: 10px; transition: border 0.3s; }
+    input:focus { border-color: #1a73e8; outline: none; }
+    button { background: #1a73e8; color: white; border: none; padding: 10px 24px; border-radius: 6px; cursor: pointer; font-weight: bold; width: 100%; }
+    button:hover { background: #1557b0; }
+    button:disabled { background: #ccc; cursor: not-allowed; }
+    .result { margin-top: 15px; background: #282c34; color: #abb2bf; padding: 15px; border-radius: 6px; white-space: pre-wrap; word-break: break-word; font-family: 'Courier New', monospace; font-size: 12px; max-height: 300px; overflow-y: auto; }
+    .error { background: #fff0f0; color: #d93025; border: 1px solid #d93025; font-family: sans-serif; }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script type="text/babel">
+    // PRODUCTION CONFIG: Empty string ensures it calls the Load Balancer URL it is hosted on
+    const BASE = ""; 
+
+    function Result({ data, error, loading }) {
+      if (loading) return <div className="result">Loading...</div>;
+      if (!data && !error) return null;
+      const cls = error ? "result error" : "result";
+      const text = error ? `Error: ${error}` : (typeof data === "string" ? data : JSON.stringify(data, null, 2));
+      return <pre className={cls}>{text}</pre>;
+    }
+
+    function GetCustomersByType() {
+      const [type, setType] = React.useState("PREMIUM");
+      const [result, setResult] = React.useState(null);
+      const [error, setError] = React.useState(null);
+      const [loading, setLoading] = React.useState(false);
+
+      async function hit() {
+        setLoading(true); setResult(null); setError(null);
+        try {
+          const res = await fetch(`${BASE}/customer/controller/getCustomersByType/${encodeURIComponent(type)}`);
+          if (!res.ok) throw new Error(`Server responded with ${res.status}`);
+          setResult(await res.json());
+        } catch(e) { setError(e.message); }
+        finally { setLoading(false); }
+      }
+
+      return (
+        <div className="section">
+          <h2>1. Fetch Customers by Type</h2>
+          <code>GET /customer/controller/getCustomersByType/{'{type}'}</code>
+          <label>Enter Type</label>
+          <input value={type} onChange={e => setType(e.target.value)} placeholder="e.g. PREMIUM, REGULAR" />
+          <button onClick={hit} disabled={loading}>Execute Request</button>
+          <Result data={result} error={error} loading={loading} />
+        </div>
+      );
+    }
+
+    function UpdateCustomer() {
+      const [form, setForm] = React.useState({ customerId: "", customerName: "", customerEmail: "", customerType: "" });
+      const [result, setResult] = React.useState(null);
+      const [error, setError] = React.useState(null);
+      const [loading, setLoading] = React.useState(false);
+
+      const change = (k, v) => setForm(f => ({ ...f, [k]: v }));
+
+      async function hit() {
+        setLoading(true); setResult(null); setError(null);
+        try {
+          const res = await fetch(`${BASE}/customer/controller/updateCustomer`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ ...form, customerId: Number(form.customerId) })
+          });
+          if (!res.ok) throw new Error(`Update failed (${res.status})`);
+          setResult(await res.text());
+        } catch(e) { setError(e.message); }
+        finally { setLoading(false); }
+      }
+
+      return (
+        <div className="section">
+          <h2>2. Update Customer Details</h2>
+          <code>PUT /customer/controller/updateCustomer</code>
+          <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px'}}>
+            <div><label>ID</label><input value={form.customerId} onChange={e => change("customerId", e.target.value)} /></div>
+            <div><label>Name</label><input value={form.customerName} onChange={e => change("customerName", e.target.value)} /></div>
+            <div><label>Email</label><input value={form.customerEmail} onChange={e => change("customerEmail", e.target.value)} /></div>
+            <div><label>Type</label><input value={form.customerType} onChange={e => change("customerType", e.target.value)} /></div>
+          </div>
+          <button onClick={hit} disabled={loading}>Update Customer</button>
+          <Result data={result} error={error} loading={loading} />
+        </div>
+      );
+    }
+
+    function GetOrdersByCustomerId() {
+      const [id, setId] = React.useState("");
+      const [result, setResult] = React.useState(null);
+      const [error, setError] = React.useState(null);
+      const [loading, setLoading] = React.useState(false);
+
+      async function hit() {
+        setLoading(true); setResult(null); setError(null);
+        try {
+          const res = await fetch(`${BASE}/order/controller/getOrderDetailsByCustomerId/${id}`);
+          if (!res.ok) throw new Error(`Orders not found (${res.status})`);
+          setResult(await res.json());
+        } catch(e) { setError(e.message); }
+        finally { setLoading(false); }
+      }
+
+      return (
+        <div className="section">
+          <h2>3. Get Customer Orders</h2>
+          <code>GET /order/controller/getOrderDetailsByCustomerId/{'{id}'}</code>
+          <label>Customer ID</label>
+          <input value={id} onChange={e => setId(e.target.value)} placeholder="e.g. 101" />
+          <button onClick={hit} disabled={loading}>Search Orders</button>
+          <Result data={result} error={error} loading={loading} />
+        </div>
+      );
+    }
+
+    function UpdateProductStock() {
+      const [form, setForm] = React.useState({ productId: "", productName: "", price: "", stock: "" });
+      const [result, setResult] = React.useState(null);
+      const [error, setError] = React.useState(null);
+      const [loading, setLoading] = React.useState(false);
+
+      const change = (k, v) => setForm(f => ({ ...f, [k]: v }));
+
+      async function hit() {
+        setLoading(true); setResult(null); setError(null);
+        try {
+          const res = await fetch(`${BASE}/product/controller/updateProductStock`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              productId: Number(form.productId),
+              productName: form.productName,
+              price: Number(form.price),
+              stock: Number(form.stock)
+            })
+          });
+          if (!res.ok) throw new Error(`Stock update failed (${res.status})`);
+          setResult(await res.text());
+        } catch(e) { setError(e.message); }
+        finally { setLoading(false); }
+      }
+
+      return (
+        <div className="section">
+          <h2>4. Inventory Management</h2>
+          <code>PUT /product/controller/updateProductStock</code>
+          <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px'}}>
+            <div><label>Product ID</label><input value={form.productId} onChange={e => change("productId", e.target.value)} /></div>
+            <div><label>Product Name</label><input value={form.productName} onChange={e => change("productName", e.target.value)} /></div>
+            <div><label>Price</label><input value={form.price} onChange={e => change("price", e.target.value)} /></div>
+            <div><label>Stock Qty</label><input value={form.stock} onChange={e => change("stock", e.target.value)} /></div>
+          </div>
+          <button onClick={hit} disabled={loading}>Sync Inventory</button>
+          <Result data={result} error={error} loading={loading} />
+        </div>
+      );
+    }
+
+    function App() {
+      return (
+        <div className="container">
+          <h1>Retail System Dashboard</h1>
+          <p style={{textAlign: 'center', color: '#666'}}>EKS Production Environment</p>
+          <GetCustomersByType />
+          <UpdateCustomer />
+          <GetOrdersByCustomerId />
+          <UpdateProductStock />
+        </div>
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+  </script>
+</body>
+</html>
