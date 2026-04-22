@@ -39,8 +39,9 @@
       return <pre className={cls}>{text}</pre>;
     }
 
+    // 1. Fetch Customers by Type
     function GetCustomersByType() {
-      const [type, setType] = React.useState("PREMIUM");
+      const [type, setType] = React.useState(null);
       const [result, setResult] = React.useState(null);
       const [error, setError] = React.useState(null);
       const [loading, setLoading] = React.useState(false);
@@ -60,13 +61,14 @@
           <h2>1. Fetch Customers by Type</h2>
           <code>GET /customer/controller/getCustomersByType/{'{type}'}</code>
           <label>Enter Type</label>
-          <input value={type} onChange={e => setType(e.target.value)} placeholder="e.g. PREMIUM, REGULAR" />
+          <input value={type} onChange={e => setType(e.target.value)} placeholder="e.g. Platinum, Gold, Silver" />
           <button onClick={hit} disabled={loading}>Execute Request</button>
           <Result data={result} error={error} loading={loading} />
         </div>
       );
     }
 
+    // 2. Update Customer Details
     function UpdateCustomer() {
       const [form, setForm] = React.useState({ customerId: "", customerName: "", customerEmail: "", customerType: "" });
       const [result, setResult] = React.useState(null);
@@ -105,6 +107,7 @@
       );
     }
 
+    // 3. Get Customer Orders
     function GetOrdersByCustomerId() {
       const [id, setId] = React.useState("");
       const [result, setResult] = React.useState(null);
@@ -133,6 +136,7 @@
       );
     }
 
+    // 4. Inventory Management
     function UpdateProductStock() {
       const [form, setForm] = React.useState({ productId: "", productName: "", price: "", stock: "" });
       const [result, setResult] = React.useState(null);
@@ -176,6 +180,40 @@
       );
     }
 
+    // 5. Advanced Order Search (New Section Added)
+    function GetOrdersByFilters() {
+      const [type, setType] = React.useState(null);
+      const [min, setMin] = React.useState(null);
+      const [max, setMax] = React.useState(null);
+      const [result, setResult] = React.useState(null);
+      const [error, setError] = React.useState(null);
+      const [loading, setLoading] = React.useState(false);
+
+      async function hit() {
+        setLoading(true); setResult(null); setError(null);
+        try {
+          const res = await fetch(`${BASE}/order/controller/getOrderDetailsByCustomerTypeAndBillInRange/${type}--${min}--${max}`);
+          if (!res.ok) throw new Error(`Search failed (${res.status})`);
+          setResult(await res.json());
+        } catch(e) { setError(e.message); }
+        finally { setLoading(false); }
+      }
+
+      return (
+        <div className="section">
+          <h2>5. Advanced Order Search</h2>
+          <code>GET /order/controller/getOrderDetailsByCustomerTypeAndBillInRange/...</code>
+          <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '10px'}}>
+            <div><label>Type</label><input value={type} onChange={e => setType(e.target.value)} /></div>
+            <div><label>Min Bill</label><input value={min} onChange={e => setMin(e.target.value)} /></div>
+            <div><label>Max Bill</label><input value={max} onChange={e => setMax(e.target.value)} /></div>
+          </div>
+          <button onClick={hit} disabled={loading}>Filter Orders</button>
+          <Result data={result} error={error} loading={loading} />
+        </div>
+      );
+    }
+
     function App() {
       return (
         <div className="container">
@@ -185,6 +223,7 @@
           <UpdateCustomer />
           <GetOrdersByCustomerId />
           <UpdateProductStock />
+          <GetOrdersByFilters />
         </div>
       );
     }
